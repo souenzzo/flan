@@ -24,7 +24,7 @@ touch deps.edn
 
 ```clojure
 {:deps    {br.com.souenzzo/flang {:git/url "https://github.com/souenzzo/flan"
-                                  :sha     "1cdab661d206954d57ecd59622a9799571178e87"}}
+                                  :sha     "848aa1c6c4886449c91e58fd7206c5204aa33a8e"}}
  :aliases {:dev {:main-opts ["-m" "br.com.souenzo.flan" "--dev" "my-first-webapp"]}}} 
 ```
 

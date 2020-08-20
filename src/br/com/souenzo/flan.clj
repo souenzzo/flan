@@ -22,6 +22,7 @@
   (try
     (require (symbol ns-name)
              :reload)
+    (prn [(symbol ns-name) :reload :ok])
     (catch Throwable ex))
   (let [{::keys [path]
          :or    {path (str ns-name)}} (rr ns-name "-index")]
