@@ -36,3 +36,32 @@ clj -A:dev
 ```
 
 - It will start at [localhost:8080](http://localhost:8080). Connect your browser into it and flow the instructions!
+
+## Simple examples
+
+- A simple and incomplete example of "Todo APP"
+
+```clojure
+
+(defonce todos (atom #{}))
+
+(defn -get
+  [req]
+  [:html
+   [:head]
+   [:body
+    [:form
+     {:method "POST"}
+     [:input {:name "text"}]
+     [:input {:type "submit"}]]
+    [:ul
+     (for [todo @todos]
+       [:li todo])]]])
+
+(defn -post
+  [{:keys [params headers]}]
+  (swap! todos conj (:text params))
+  {:headers {"Location" (get headers "referer" "/")}
+   :status  301})
+
+```

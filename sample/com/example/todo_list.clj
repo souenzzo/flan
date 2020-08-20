@@ -16,7 +16,7 @@
        [:li todo])]]])
 
 (defn -post
-  [{:keys [params]}]
+  [{:keys [params headers]}]
   (swap! todos conj (:text params))
-  {:headers {"Location" "/com.example.todo-list"}
+  {:headers {"Location" (get headers "referer" "/")}
    :status  301})
