@@ -4,6 +4,7 @@
             [hiccup2.core :as h]
             [io.pedestal.http.route :as route]
             [clojure.edn :as edn]
+            [clojure.tools.cli :as cli]
             [io.pedestal.interceptor :as interceptor]
             [io.pedestal.http.body-params :as body-params]
             [clojure.java.io :as io]))
@@ -75,7 +76,10 @@
                                   [:p "The code for " [:code ns-name] "in on" [:code absolute-name]]
                                   [:p "You can copy and paste this and the end of the file and try again"]
                                   [:pre "(defn -get\n  [req]\n  [:html\n   [:head]\n   [:body\n    \"Hello World!\"]])"])
-                                :else [:p "You need to create a file in " [:code (str "src/" ns-name)]])]
+                                :else (list  [:p "You need to create a file in " [:code (str "src/" base-file-name ".clj")]]
+                                             [:p "The contents of this file should be something like"]
+                                             [:pre (format "(ns %s)\n\n(defn -get\n  [req]\n  [:html\n   [:head\n    [:title \"Hello\"]]\n   [:body\n    \"world!\"]])\n"
+                                                           ns-name)]))]
                              [:footer]]]
                            (h/html
                              {:mode :html}
@@ -88,11 +92,34 @@
        (hash-map :name ::not-found :leave)
        interceptor/interceptor))
 
+
+(def option-spec
+  [["-p" "--port PORT" "Port number"
+    :default 8080
+    :parse-fn edn/read-string
+    :validate [number? "Must be a number"
+               #(< 1024 % 0x10000) "Must be a number between 0 and 65536"]]
+   ["-d" "--dev NS-NAME" "main namespace"
+    :validate [string?]]])
+
 (defn start
-  [port->server opts]
-  (prn port->server opts)
-  (let [port 8080
-        env {::ns-name "com.example.todo-list"}]
+  [port->server args]
+  (let [{{:keys [port dev]} :options
+         :keys              [errors]} (cli/parse-opts
+                                        args
+                                        option-spec)
+        errors (concat errors
+                       (try
+                         (when-not (simple-symbol? (edn/read-string dev))
+                           [(str "The name '" dev "' isn't a clojure symbol")])
+                         (catch Throwable ex
+                           [(str "Clojure can't read '" dev "' as a symbol")])))
+
+        env {::ns-name dev}]
+    (when-not (empty? errors)
+      (binding [*out* *err*]
+        (run! println errors))
+      (System/exit 1))
     (some-> port->server
             (get port)
             http/stop)
