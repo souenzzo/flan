@@ -1,0 +1,8 @@
+{:paths   ["src"]
+ :deps    {org.clojure/tools.cli        {:mvn/version "1.0.194"}
+           io.pedestal/pedestal.service {:mvn/version "0.5.8"}
+           io.pedestal/pedestal.jetty   {:mvn/version "0.5.8"}}
+
+ :aliases {:dev {:extra-paths ["sample"]
+                 :extra-deps  {org.clojure/clojure {:mvn/version "1.10.1"}
+                               hiccup/hiccup       {:mvn/version "2.0.0-alpha2"}}}}}
