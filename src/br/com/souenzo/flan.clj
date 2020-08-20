@@ -4,6 +4,7 @@
             [hiccup2.core :as h]
             [io.pedestal.http.route :as route]
             [clojure.edn :as edn]
+            [clj-kondo.core :as kondo]
             [clojure.tools.cli :as cli]
             [io.pedestal.interceptor :as interceptor]
             [io.pedestal.http.body-params :as body-params]
@@ -17,6 +18,8 @@
     (catch FileNotFoundException ex
       nil)))
 
+(defonce last-error (atom nil))
+
 (defn routes
   [{::keys [ns-name]}]
   (try
@@ -26,9 +29,60 @@
     (catch Throwable ex))
   (let [{::keys [path]
          :or    {path (str ns-name)}} (rr ns-name "-index")]
-    (-> #{[(str "/" ns-name) :any [{:name  ::error
+    (-> #{["/halp" :get [(fn [req]
+                           (let [kondos (for [{:keys [type filename message row col end-row end-col level]} (:findings (kondo/run! {:lint ["src"]}))
+                                              :let [content (into [""] (line-seq (io/reader filename)))]]
+                                          [:div
+                                           [:div message]
+                                           [:div level]
+                                           [:div filename]
+                                           [:div
+                                            (for [i (range (- row 3) (+ 4 row))]
+                                              [:pre
+                                               (when (>= row i
+                                                         (or row end-row))
+                                                 {:style {:background-color "red"}})
+                                               (str i " |")
+                                               (get content i)])]])
+                                 body [:body
+                                       [:header]
+                                       [:main
+                                        [:h2 "Kondo lints"]
+                                        kondos]
+                                       [:footer]]]
+                             {:body    (->> [:html
+                                             [:head
+                                              [:title "Halp"]]
+                                             body]
+                                            (h/html
+                                              {:mode :html}
+                                              (h/raw "<!DOCTYPE html>\n"))
+                                            str)
+                              :status  200
+                              :headers {"Content-Type" (mime/default-mime-types "html")}}))]
+           :route-name ::halp]
+          [(str "/" ns-name) :any [{:name  ::error
                                     :error (fn [ctx ex]
-                                             ())}
+                                             (reset! last-error ex)
+                                             (let [^Throwable cause (ex-cause ex)]
+                                               (assoc ctx
+                                                 :response {:body    (->> [:html
+                                                                           [:head
+                                                                            [:title "Not Found"]]
+                                                                           [:body
+                                                                            [:header]
+                                                                            [:main
+                                                                             [:a {:href "/halp"}
+                                                                              "Click here for more help"]
+                                                                             [:div [:code (ex-message cause)]]
+                                                                             [:div [:code (str (class cause))]]]
+                                                                            [:footer]]]
+                                                                          (h/html
+                                                                            {:mode :html}
+                                                                            (h/raw "<!DOCTYPE html>\n"))
+                                                                          str)
+                                                            :headers {"Content-Type" (mime/default-mime-types "html")}
+                                                            :status  500})))}
                                    (body-params/body-params)
                                    {:name  ::merge-params
                                     :enter (fn [ctx]
@@ -95,7 +149,9 @@
                                 :else (list [:p "You need to create a file in " [:code (str "src/" base-file-name ".clj")]]
                                             [:p "The contents of this file should be something like"]
                                             [:pre (format "(ns %s)\n\n(defn -get\n  [req]\n  [:html\n   [:head\n    [:title \"Hello\"]]\n   [:body\n    \"world!\"]])\n"
-                                                          ns-name)]))]
+                                                          ns-name)]))
+                              [:a {:href "/halp"}
+                               "Click here for more help"]]
                              [:footer]]]
                            (h/html
                              {:mode :html}
@@ -151,7 +207,7 @@
                        http/dev-interceptors
                        http/create-server
                        http/start))]
-       (printf "Started at http://localhost:%s\n" port)
+    (printf "Started at http://localhost:%s\n" port)
     ret))
 
 (defonce port->server (atom {}))
