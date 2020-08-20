@@ -25,7 +25,7 @@ mkdir src
 
 ```clojure
 {:deps    {br.com.souenzzo/flang {:git/url "https://github.com/souenzzo/flan"
-                                  :sha     "dfca2d23ffa6270251a16e898f528f10d885cc32"}}
+                                  :sha     "c387d06e36d9f03e0cf12c4fcf5814f7300a00c0"}}
  :aliases {:dev {:main-opts ["-m" "br.com.souenzzo.flan" "--dev" "my-first-webapp"]}}} 
 ```
 
