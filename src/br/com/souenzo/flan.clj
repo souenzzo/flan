@@ -151,7 +151,7 @@
                        http/dev-interceptors
                        http/create-server
                        http/start))]
-    (println "Started at http://localhost:" port)
+    (printf "Started at http://localhost:%s\n" port)
     ret))
 
 (defonce port->server (atom {}))

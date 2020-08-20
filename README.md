@@ -14,17 +14,18 @@ mkdir my-first-webapp
 cd my-first-webapp
 ```
 
-- Create a `deps.edn` file
+- Create a `deps.edn` file and a `src` dir for sources
 
 ```bash 
 touch deps.edn
+mkdir src
 ```
 
 - Copy and paste this into `deps.edn`
 
 ```clojure
 {:deps    {br.com.souenzzo/flang {:git/url "https://github.com/souenzzo/flan"
-                                  :sha     "848aa1c6c4886449c91e58fd7206c5204aa33a8e"}}
+                                  :sha     "36e8f3ebbf0e277f331b37a88ac8f5be18cbc70b"}}
  :aliases {:dev {:main-opts ["-m" "br.com.souenzo.flan" "--dev" "my-first-webapp"]}}} 
 ```
 
