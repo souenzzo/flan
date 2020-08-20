@@ -1,4 +1,4 @@
-(ns br.com.souenzo.flan
+(ns br.com.souenzzo.flan
   (:require [io.pedestal.http :as http]
             [ring.util.mime-type :as mime]
             [hiccup2.core :as h]
