@@ -23,14 +23,15 @@ touch deps.edn
 - Copy and paste this into `deps.edn`
 
 ```clojure
-{:deps {br.com.souenzzo/flang {:git/url "https://github.com/souenzzo/flan"
-                               :sha     "29720fb38329609c0f93a5b1fdb2fd2d43a112ee"}}} 
+{:deps    {br.com.souenzzo/flang {:git/url "https://github.com/souenzzo/flan"
+                                  :sha     "1cdab661d206954d57ecd59622a9799571178e87"}}
+ :aliases {:dev {:main-opts ["-m" "br.com.souenzo.flan" "--dev" "my-first-webapp"]}}} 
 ```
 
 - Run it!
 
 ```
-clj -m br.com.souenzzo.flan --dev my-first-webapp
+clj -A:dev
 ```
 
 - It will start at [localhost:8080](http://localhost:8080). Connect your browser into it and flow the instructions!

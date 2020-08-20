@@ -7,15 +7,28 @@
             [clojure.tools.cli :as cli]
             [io.pedestal.interceptor :as interceptor]
             [io.pedestal.http.body-params :as body-params]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io])
+  (:import (java.io FileNotFoundException)))
+
+(defn rr
+  [ns n]
+  (try
+    (requiring-resolve (symbol (str ns) (str n)))
+    (catch FileNotFoundException ex
+      nil)))
 
 (defn routes
   [{::keys [ns-name]}]
-  (require (symbol ns-name)
-           :reload)
+  (try
+    (require (symbol ns-name)
+             :reload)
+    (catch Throwable ex))
   (let [{::keys [path]
-         :or    {path (str ns-name)}} (requiring-resolve (symbol ns-name "-index"))]
-    (-> #{[(str "/" ns-name) :any [(body-params/body-params)
+         :or    {path (str ns-name)}} (rr ns-name "-index")]
+    (-> #{[(str "/" ns-name) :any [{:name  ::error
+                                    :error (fn [ctx ex]
+                                             ())}
+                                   (body-params/body-params)
                                    {:name  ::merge-params
                                     :enter (fn [ctx]
                                              (let [params (-> ctx
@@ -41,7 +54,7 @@
                                     :enter (fn [{{:keys [request-method]} :request
                                                  :keys                    [request]
                                                  :as                      ctx}]
-                                             (when-let [-handler (requiring-resolve (symbol ns-name (str "-" (name request-method))))]
+                                             (when-let [-handler (rr ns-name (str "-" (name request-method)))]
                                                (assoc ctx :response (-handler request))))}]]
           :route-name (keyword ns-name)}
         route/expand-routes)))
@@ -67,19 +80,21 @@
                              [:main
                               [:p "Can't find " [:code (-> request :uri pr-str)]]
                               (cond
-                                (requiring-resolve (symbol ns-name "-get"))
-                                [:p "You can try " [:a {:href "/com.example.todo-list"}
-                                                    "/com.example.todo-list"]]
+                                (rr ns-name "-get")
+                                [:p "You can try " [:a {:href (str "/" ns-name)}
+                                                    (str "/" ns-name)]]
                                 absolute-name
                                 (list
                                   [:p "There is no function " [:code "-get"] " defined in your main namespace " [:code ns-name]]
                                   [:p "The code for " [:code ns-name] "in on" [:code absolute-name]]
                                   [:p "You can copy and paste this and the end of the file and try again"]
-                                  [:pre "(defn -get\n  [req]\n  [:html\n   [:head]\n   [:body\n    \"Hello World!\"]])"])
-                                :else (list  [:p "You need to create a file in " [:code (str "src/" base-file-name ".clj")]]
-                                             [:p "The contents of this file should be something like"]
-                                             [:pre (format "(ns %s)\n\n(defn -get\n  [req]\n  [:html\n   [:head\n    [:title \"Hello\"]]\n   [:body\n    \"world!\"]])\n"
-                                                           ns-name)]))]
+                                  [:pre (format "(ns %s)
+
+(defn -get\n  [req]\n  [:html\n   [:head]\n   [:body\n    \"Hello World!\"]])" ns-name)])
+                                :else (list [:p "You need to create a file in " [:code (str "src/" base-file-name ".clj")]]
+                                            [:p "The contents of this file should be something like"]
+                                            [:pre (format "(ns %s)\n\n(defn -get\n  [req]\n  [:html\n   [:head\n    [:title \"Hello\"]]\n   [:body\n    \"world!\"]])\n"
+                                                          ns-name)]))]
                              [:footer]]]
                            (h/html
                              {:mode :html}
@@ -115,26 +130,28 @@
                          (catch Throwable ex
                            [(str "Clojure can't read '" dev "' as a symbol")])))
 
-        env {::ns-name dev}]
-    (when-not (empty? errors)
-      (binding [*out* *err*]
-        (run! println errors))
-      (System/exit 1))
-    (some-> port->server
-            (get port)
-            http/stop)
-    (assoc port->server
-      port (-> {::http/routes                (fn []
-                                               (routes env))
-                ::http/join?                 false
-                ::http/mime-types            mime/default-mime-types
-                ::http/port                  port
-                ::http/not-found-interceptor (not-found env)
-                ::http/type                  :jetty}
-               http/default-interceptors
-               http/dev-interceptors
-               http/create-server
-               http/start))))
+        env {::ns-name dev}
+        _ (when-not (empty? errors)
+            (binding [*out* *err*]
+              (run! println errors))
+            (System/exit 1))
+        _ (some-> port->server
+                  (get port)
+                  http/stop)
+        ret (assoc port->server
+              port (-> {::http/routes                (fn []
+                                                       (routes env))
+                        ::http/join?                 false
+                        ::http/mime-types            mime/default-mime-types
+                        ::http/port                  port
+                        ::http/not-found-interceptor (not-found env)
+                        ::http/type                  :jetty}
+                       http/default-interceptors
+                       http/dev-interceptors
+                       http/create-server
+                       http/start))]
+    (println "Started at http://localhost:" port)
+    ret))
 
 (defonce port->server (atom {}))
 
